@@ -19,7 +19,10 @@ export default function PublicCatalog() {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans pb-24">
       {/* Header */}
-      <header className="pt-16 pb-12 px-6 text-center space-y-4">
+      <header className="pt-16 pb-12 px-6 text-center space-y-4 relative">
+        <a href="/admin" className="absolute top-6 right-6 text-sm text-muted-foreground hover:text-foreground">
+          Admin
+        </a>
         <h1 className="font-serif text-5xl md:text-6xl text-primary">Aroma PRO</h1>
         <p className="text-muted-foreground font-serif text-xl italic max-w-md mx-auto">
           Artesanía en cera aromática. Eleva tus sentidos.
@@ -44,29 +47,36 @@ export default function PublicCatalog() {
       </div>
 
       {/* Product Grid */}
-      <div className="px-6 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredProducts.map(product => (
-          <div key={product.id} className="bg-card rounded-md shadow-sm overflow-hidden flex flex-col items-center p-4">
-            <div className="w-48 h-48 rounded-full overflow-hidden mb-6 bg-muted">
-              {product.imageUrl ? (
-                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground font-serif italic">
-                  Sin imagen
-                </div>
-              )}
+      {filteredProducts.length === 0 ? (
+        <div className="px-6 text-center text-muted-foreground py-12">
+          <p className="font-serif italic text-lg mb-2">No hay productos disponibles en esta categoría.</p>
+          <p className="text-sm">Si eres el administrador, ingresa al panel de Admin para agregar productos al catálogo.</p>
+        </div>
+      ) : (
+        <div className="px-6 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredProducts.map(product => (
+            <div key={product.id} className="bg-card rounded-md shadow-sm overflow-hidden flex flex-col items-center p-4">
+              <div className="w-48 h-48 rounded-full overflow-hidden mb-6 bg-muted">
+                {product.imageUrl ? (
+                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground font-serif italic">
+                    Sin imagen
+                  </div>
+                )}
+              </div>
+              <h3 className="font-serif text-xl mb-2 text-center">{product.name}</h3>
+              <p className="text-primary font-medium mb-4">${product.price.toFixed(2)}</p>
+              <button 
+                onClick={() => cart.addItem(product)}
+                className="w-full py-3 rounded-full border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+              >
+                Agregar al carrito
+              </button>
             </div>
-            <h3 className="font-serif text-xl mb-2 text-center">{product.name}</h3>
-            <p className="text-primary font-medium mb-4">${product.price.toFixed(2)}</p>
-            <button 
-              onClick={() => cart.addItem(product)}
-              className="w-full py-3 rounded-full border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
-            >
-              Agregar al carrito
-            </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {cart.items.length > 0 && <CartFab />}
     </div>
