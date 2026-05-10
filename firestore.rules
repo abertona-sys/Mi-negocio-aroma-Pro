@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Global Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'abertona@gmail.com';
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    // Validate ID length & characters
+    function isValidId(id) { 
+        return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    // --- Product Validation ---
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'category', 'price', 'isActive', 'createdAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.category is string && data.category in ['sachet', 'melt', 'squeeze']
+        && data.price is number && data.price >= 0
+        && data.isActive is bool
+        && (data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() <= 2000));
+    }
+
+    // --- Material Validation ---
+    function isValidMaterial(data) {
+      return data.keys().hasAll(['name', 'quantity', 'unit'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.quantity is number && data.quantity >= 0
+        && data.unit is string && data.unit.size() <= 50;
+    }
+
+    // --- Order Validation ---
+    function isValidOrder(data) {
+      return data.keys().hasAll(['customerName', 'customerPhone', 'items', 'total', 'status', 'createdAt'])
+        && data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 100
+        && data.customerPhone is string && data.customerPhone.size() > 0 && data.customerPhone.size() <= 50
+        && data.items is list && data.items.size() > 0 && data.items.size() <= 50
+        && data.total is number && data.total >= 0
+        && data.status is string && data.status in ['pending', 'completed', 'cancelled'];
+    }
+
+    // --- Collections ---
+
+    match /products/{productId} {
+      // Anyone can read products (for the public catalog)
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) && incoming().createdAt == request.time;
+      allow update: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin();
+    }
+
+    match /materials/{materialId} {
+      // Admin only
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidId(materialId) && isValidMaterial(incoming());
+      allow update: if isAdmin() && isValidId(materialId) && isValidMaterial(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      // Admin can read all orders
+      allow read: if isAdmin();
+      // Anyone can create an order (public checkout)
+      allow create: if isValidId(orderId) && isValidOrder(incoming()) && incoming().createdAt == request.time && incoming().status == 'pending';
+      // Admin can update orders (e.g. status)
+      allow update: if isAdmin() && isValidId(orderId) && isValidOrder(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin();
+    }
+  }
+}
