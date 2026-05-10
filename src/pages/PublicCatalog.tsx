@@ -1,16 +1,48 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingBag, Search } from 'lucide-react';
-import { fetchActiveProducts, createDocument, collections } from '../services/db';
+import { ShoppingBag } from 'lucide-react';
+import { fetchActiveProducts, createDocument, collections, fetchStoreProfile } from '../services/db';
+import { Link, useParams } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 
 export default function PublicCatalog() {
+  const { storeId } = useParams<{ storeId: string }>();
   const [products, setProducts] = useState<any[]>([]);
+  const [storeProfile, setStoreProfile] = useState<any>(null);
   const [category, setCategory] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+  
   const cart = useCartStore();
 
   useEffect(() => {
-    fetchActiveProducts().then(setProducts);
-  }, []);
+    if (storeId) {
+      Promise.all([
+        fetchActiveProducts(storeId),
+        fetchStoreProfile(storeId)
+      ]).then(([prods, profile]) => {
+        setProducts(prods);
+        setStoreProfile(profile);
+        setLoading(false);
+      });
+    }
+  }, [storeId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground animate-pulse">Cargando catálogo...</p>
+      </div>
+    );
+  }
+
+  if (!storeProfile) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <h2 className="text-2xl font-serif mb-2">Tienda no encontrada</h2>
+        <p className="text-muted-foreground mb-6">El enlace no es válido o la tienda no existe.</p>
+        <Link to="/" className="text-primary hover:underline">Volver a Aroma PRO</Link>
+      </div>
+    );
+  }
 
   const filteredProducts = category === 'all' 
     ? products 
@@ -20,12 +52,12 @@ export default function PublicCatalog() {
     <div className="min-h-screen bg-background text-foreground font-sans pb-24">
       {/* Header */}
       <header className="pt-16 pb-12 px-6 text-center space-y-4 relative">
-        <a href="/admin" className="absolute top-6 right-6 text-sm text-muted-foreground hover:text-foreground">
-          Admin
-        </a>
-        <h1 className="font-serif text-5xl md:text-6xl text-primary">Aroma PRO</h1>
+        <Link to="/admin" className="absolute top-6 right-6 text-sm text-muted-foreground hover:text-foreground">
+          Soy el vendedor
+        </Link>
+        <h1 className="font-serif text-5xl md:text-6xl text-primary">{storeProfile.storeName || 'Aroma PRO'}</h1>
         <p className="text-muted-foreground font-serif text-xl italic max-w-md mx-auto">
-          Artesanía en cera aromática. Eleva tus sentidos.
+          {storeProfile.description || 'Artesanía en cera aromática. Eleva tus sentidos.'}
         </p>
       </header>
 
@@ -50,7 +82,6 @@ export default function PublicCatalog() {
       {filteredProducts.length === 0 ? (
         <div className="px-6 text-center text-muted-foreground py-12">
           <p className="font-serif italic text-lg mb-2">No hay productos disponibles en esta categoría.</p>
-          <p className="text-sm">Si eres el administrador, ingresa al panel de Admin para agregar productos al catálogo.</p>
         </div>
       ) : (
         <div className="px-6 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -78,12 +109,12 @@ export default function PublicCatalog() {
         </div>
       )}
 
-      {cart.items.length > 0 && <CartFab />}
+      {cart.items.length > 0 && <CartFab phone={storeProfile.phone} storeId={storeId!} />}
     </div>
   );
 }
 
-function CartFab() {
+function CartFab({ phone, storeId }: { phone: string, storeId: string }) {
   const cart = useCartStore();
   const [isOpen, setIsOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
@@ -96,9 +127,13 @@ function CartFab() {
     
     setIsCheckingOut(true);
     const orderId = Math.random().toString(36).substring(2, 9);
-    const adminPhone = "1234567890"; // In a real app, this should be configurable
+    
+    // Removing non numeric chars for whatsapp link
+    const cleanPhone = phone ? phone.replace(/\D/g,'') : '';
+    const destinationPhone = cleanPhone || "1234567890"; 
     
     const orderData = {
+      storeId,
       customerName,
       customerPhone,
       items: cart.items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price, id: i.id })),
@@ -117,7 +152,7 @@ function CartFab() {
       });
       msg += `\nTotal: $${cart.total().toFixed(2)}\n\nPor favor confirmen mi pedido.`;
       
-      window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+      window.open(`https://wa.me/${destinationPhone}?text=${encodeURIComponent(msg)}`, '_blank');
       
       cart.clearCart();
       setIsOpen(false);

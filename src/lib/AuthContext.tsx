@@ -7,7 +7,6 @@ interface AuthContextType {
   loading: boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
-  isAdmin: boolean;
 }
 
 export const AuthContext = React.createContext<AuthContextType>({
@@ -15,7 +14,6 @@ export const AuthContext = React.createContext<AuthContextType>({
   loading: true,
   login: async () => {},
   logout: async () => {},
-  isAdmin: false
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -39,10 +37,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signOut(auth);
   };
 
-  const isAdmin = user?.email === 'abertona@gmail.com';
-
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

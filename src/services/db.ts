@@ -1,15 +1,57 @@
-import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 
 export const collections = {
+  STORES: "stores",
   PRODUCTS: "products",
   MATERIALS: "materials",
   ORDERS: "orders"
 };
 
-export async function fetchActiveProducts() {
+// ========================
+// STORES
+// ========================
+
+export async function fetchStoreProfile(storeId: string) {
   try {
-    const q = query(collection(db, collections.PRODUCTS), where("isActive", "==", true));
+    const docRef = doc(db, collections.STORES, storeId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() };
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `${collections.STORES}/${storeId}`);
+    return null;
+  }
+}
+
+export async function saveStoreProfile(storeId: string, data: any) {
+  try {
+    const docRef = doc(db, collections.STORES, storeId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      await updateDoc(docRef, data);
+    } else {
+      await setDoc(docRef, { ...data, ownerId: storeId, createdAt: new Date().toISOString() });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${collections.STORES}/${storeId}`);
+  }
+}
+
+
+// ========================
+// PRODUCTS
+// ========================
+
+export async function fetchActiveProducts(storeId: string) {
+  try {
+    const q = query(
+      collection(db, collections.PRODUCTS), 
+      where("storeId", "==", storeId),
+      where("isActive", "==", true)
+    );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -18,17 +60,8 @@ export async function fetchActiveProducts() {
   }
 }
 
-export function subscribeToOrders(callback: (orders: any[]) => void) {
-  const q = query(collection(db, collections.ORDERS), orderBy("createdAt", "desc"));
-  return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, collections.ORDERS);
-  });
-}
-
-export function subscribeToProducts(callback: (products: any[]) => void) {
-  const q = query(collection(db, collections.PRODUCTS), orderBy("createdAt", "desc"));
+export function subscribeToProducts(storeId: string, callback: (products: any[]) => void) {
+  const q = query(collection(db, collections.PRODUCTS), where("storeId", "==", storeId));
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
   }, (error) => {
@@ -36,8 +69,12 @@ export function subscribeToProducts(callback: (products: any[]) => void) {
   });
 }
 
-export function subscribeToMaterials(callback: (materials: any[]) => void) {
-  const q = query(collection(db, collections.MATERIALS), orderBy("createdAt", "desc"));
+// ========================
+// MATERIALS
+// ========================
+
+export function subscribeToMaterials(storeId: string, callback: (materials: any[]) => void) {
+  const q = query(collection(db, collections.MATERIALS), where("storeId", "==", storeId));
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
   }, (error) => {
@@ -45,8 +82,29 @@ export function subscribeToMaterials(callback: (materials: any[]) => void) {
   });
 }
 
+// ========================
+// ORDERS
+// ========================
+
+export function subscribeToOrders(storeId: string, callback: (orders: any[]) => void) {
+  const q = query(collection(db, collections.ORDERS), where("storeId", "==", storeId));
+  return onSnapshot(q, (snapshot) => {
+    // Sort locally because we can't orderBy on a different field than the inequality filter in Firebase without an index
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    data.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    callback(data);
+  }, (error) => {
+    handleFirestoreError(error, OperationType.LIST, collections.ORDERS);
+  });
+}
+
+// ========================
+// GENERIC OPERATIONS
+// ========================
+
 export async function createDocument(collectionName: string, id: string, data: any) {
   try {
+    // Ensure storeId is included implicitly if not provided, but mostly we provide it in components
     await setDoc(doc(db, collectionName, id), { ...data, createdAt: new Date().toISOString() });
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, `${collectionName}/${id}`);
