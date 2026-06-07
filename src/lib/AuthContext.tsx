@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import { toast } from "sonner";
 
 interface AuthContextType {
   user: User | null;
@@ -30,11 +31,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    try {
+      await signInWithPopup(auth, provider);
+      toast.success("¡Sesión iniciada con éxito!");
+    } catch (error: any) {
+      console.error("Error de autenticación Firebase:", error);
+      if (error?.code === "auth/unauthorized-domain") {
+        toast.error("Error: Dominio no autorizado en Firebase", {
+          description: `Debes agregar "${window.location.hostname}" en la consola de Firebase > Authentication > Ajustes > Dominios autorizados.`,
+          duration: 10000,
+        });
+      } else if (error?.code === "auth/popup-blocked") {
+        toast.error("Ventana emergente bloqueada", {
+          description: "Por favor habilita las ventanas emergentes en tu navegador para poder iniciar sesión con Google.",
+          duration: 8000,
+        });
+      } else {
+        toast.error("Error al iniciar sesión", {
+          description: error?.message || "No se pudo conectar con Firebase Auth.",
+          duration: 8000,
+        });
+      }
+      throw error;
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+      toast.success("Sesión cerrada");
+    } catch (error: any) {
+      toast.error("Error al cerrar sesión");
+    }
   };
 
   return (
