@@ -12,7 +12,7 @@ export const collections = {
 // STORES
 // ========================
 
-export async function fetchStoreProfile(storeId: string) {
+export async function fetchStoreProfile(storeId: string): Promise<any> {
   try {
     const docRef = doc(db, collections.STORES, storeId);
     const docSnap = await getDoc(docRef);
