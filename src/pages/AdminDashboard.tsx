@@ -189,18 +189,48 @@ function ProductsTab({ storeId }: { storeId: string }) {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createDocument(collections.PRODUCTS, Date.now().toString(), {
-      ...formData,
-      storeId,
-      price: parseFloat(formData.price),
-    });
-    setIsAdding(false);
-    toast.success("Producto creado");
+    
+    // Normalizar coma a punto por si el usuario ingresa decimales en formato latino (por ejemplo: 150,50)
+    const normalizedPriceStr = formData.price.replace(',', '.');
+    const parsedPrice = parseFloat(normalizedPriceStr);
+
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      toast.error("El precio ingresado no es válido. Debe ser un número mayor o igual a 0.");
+      return;
+    }
+
+    try {
+      await createDocument(collections.PRODUCTS, Date.now().toString(), {
+        name: formData.name,
+        price: parsedPrice,
+        category: formData.category,
+        isActive: formData.isActive,
+        description: formData.description || '',
+        storeId,
+      });
+      setIsAdding(false);
+      setFormData({ name: '', price: '0', category: 'sachet', isActive: true, description: '' });
+      toast.success("Producto creado con éxito y guardado en tu catálogo");
+    } catch (error: any) {
+      console.error("Error al crear producto:", error);
+      toast.error("Error al guardar el producto", {
+        description: "Asegúrate de haber completado todos los campos correctamente o intenta cerrar y volver a abrir sesión.",
+        duration: 8000
+      });
+    }
   };
 
   const handleDelete = async (id: string) => {
     if(confirm('¿Eliminar producto?')) {
-      await deleteDocument(collections.PRODUCTS, id);
+      try {
+        await deleteDocument(collections.PRODUCTS, id);
+        toast.success("Producto eliminado del catálogo");
+      } catch (error: any) {
+        console.error("Error al eliminar producto:", error);
+        toast.error("Error al eliminar el producto", {
+          description: "No se pudo eliminar el producto. Reintenta de nuevo."
+        });
+      }
     }
   };
 
