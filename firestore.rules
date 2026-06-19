@@ -13,76 +13,28 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
-    
-    // Validate ID length & characters
-    function isValidId(id) { 
-        return id is string && id.size() <= 128; 
-    }
-
-    // --- Store Validation ---
-    function isValidStoreProfile(data) {
-      return data.keys().hasAll(['storeName', 'phone', 'ownerId'])
-        && data.storeName is string
-        && data.phone is string
-        && data.ownerId == request.auth.uid;
-    }
-
-    // --- Product Validation ---
-    function isValidProduct(data) {
-      return data.keys().hasAll(['storeId', 'name', 'price'])
-        && data.storeId is string && data.storeId.size() > 0
-        && data.name is string && data.name.size() > 0
-        && data.price is number && data.price >= 0;
-    }
-
-    // --- Material Validation ---
-    function isValidMaterial(data) {
-      return data.keys().hasAll(['storeId', 'name', 'quantity'])
-        && data.storeId == request.auth.uid
-        && data.name is string && data.name.size() > 0
-        && data.quantity is number && data.quantity >= 0;
-    }
-
-    // --- Order Validation ---
-    function isValidOrder(data) {
-      return data.keys().hasAll(['storeId'])
-        && data.storeId is string && data.storeId.size() > 0;
-    }
-
     // --- Collections ---
 
     match /stores/{storeId} {
-      allow read: if true; // Public can read store info
-      allow create: if isSignedIn() && storeId == request.auth.uid && isValidStoreProfile(incoming());
-      allow update: if isSignedIn() && storeId == request.auth.uid && isValidStoreProfile(incoming()) && incoming().createdAt == existing().createdAt;
+      allow read: if true;
+      allow create, update: if isSignedIn() && storeId == request.auth.uid;
     }
 
     match /products/{productId} {
-      // Anyone can read products (for the public catalog)
       allow read: if true;
-      allow create: if isSignedIn() && incoming().storeId == request.auth.uid && isValidId(productId) && isValidProduct(incoming());
-      allow update: if isSignedIn() && existing().storeId == request.auth.uid && incoming().storeId == request.auth.uid && isValidId(productId) && isValidProduct(incoming()) && incoming().createdAt == existing().createdAt;
-      allow delete: if isSignedIn() && existing().storeId == request.auth.uid;
+      allow create, update: if isSignedIn() && request.resource.data.storeId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.storeId == request.auth.uid;
     }
 
     match /materials/{materialId} {
-      // Admin only
-      allow read: if isSignedIn() && existing().storeId == request.auth.uid;
-      allow create: if isSignedIn() && incoming().storeId == request.auth.uid && isValidId(materialId) && isValidMaterial(incoming());
-      allow update: if isSignedIn() && existing().storeId == request.auth.uid && incoming().storeId == request.auth.uid && isValidId(materialId) && isValidMaterial(incoming());
-      allow delete: if isSignedIn() && existing().storeId == request.auth.uid;
+      allow read: if isSignedIn() && resource.data.storeId == request.auth.uid;
+      allow create, update: if isSignedIn() && request.resource.data.storeId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.storeId == request.auth.uid;
     }
 
     match /orders/{orderId} {
-      // Admin can read their own orders
-      allow read: if isSignedIn() && existing().storeId == request.auth.uid;
-      // Anyone can create an order (public checkout)
-      allow create: if isValidId(orderId) && isValidOrder(incoming()) && incoming().status == 'pending';
-      // Admin can update orders
-      allow update: if isSignedIn() && existing().storeId == request.auth.uid && incoming().storeId == request.auth.uid && isValidId(orderId) && isValidOrder(incoming()) && incoming().createdAt == existing().createdAt;
-      allow delete: if isSignedIn() && existing().storeId == request.auth.uid;
+      allow create: if true;
+      allow read, update, delete: if isSignedIn() && resource.data.storeId == request.auth.uid;
     }
   }
 }

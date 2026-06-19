@@ -123,8 +123,19 @@ function ProfileTab({ storeId }: { storeId: string }) {
     try {
       await saveStoreProfile(storeId, formData);
       toast.success("Configuración guardada correctamente");
-    } catch (e) {
-      toast.error("Error al guardar");
+    } catch (error: any) {
+      console.error("Error al guardar perfil:", error);
+      let errorDetails = error.message;
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed && parsed.error) {
+          errorDetails = parsed.error;
+        }
+      } catch (e) {}
+      toast.error("Error al guardar la configuración", {
+        description: `Detalle: ${errorDetails}`,
+        duration: 8000
+      });
     }
   };
 
@@ -213,9 +224,17 @@ function ProductsTab({ storeId }: { storeId: string }) {
       toast.success("Producto creado con éxito y guardado en tu catálogo");
     } catch (error: any) {
       console.error("Error al crear producto:", error);
+      let errorDetails = error.message;
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed && parsed.error) {
+          errorDetails = parsed.error;
+        }
+      } catch (e) {}
+
       toast.error("Error al guardar el producto", {
-        description: "Asegúrate de haber completado todos los campos correctamente o intenta cerrar y volver a abrir sesión.",
-        duration: 8000
+        description: `Detalles del error: ${errorDetails}. Intenta cerrar y volver a iniciar sesión si persiste.`,
+        duration: 12000
       });
     }
   };
