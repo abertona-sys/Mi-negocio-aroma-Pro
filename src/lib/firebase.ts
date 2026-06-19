@@ -21,7 +21,7 @@ const defaultDbId = defaultFirebaseConfig.firestoreDatabaseId;
 const dbId = customDbId !== undefined ? customDbId : defaultDbId;
 
 export const db = dbId && dbId !== "(default)" ? getFirestore(app, dbId) : getFirestore(app);
-export const auth = getAuth();
+export const auth = getAuth(app);
 
 export enum OperationType {
   CREATE = 'create',

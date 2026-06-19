@@ -126,15 +126,21 @@ function ProfileTab({ storeId }: { storeId: string }) {
     } catch (error: any) {
       console.error("Error al guardar perfil:", error);
       let errorDetails = error.message;
+      let diagInfo = "";
       try {
         const parsed = JSON.parse(error.message);
-        if (parsed && parsed.error) {
-          errorDetails = parsed.error;
+        if (parsed) {
+          if (parsed.error) {
+            errorDetails = parsed.error;
+          }
+          if (parsed.authInfo) {
+            diagInfo = ` [AuthId: ${parsed.authInfo.userId || 'null'}, storeId: ${storeId}]`;
+          }
         }
       } catch (e) {}
       toast.error("Error al guardar la configuración", {
-        description: `Detalle: ${errorDetails}`,
-        duration: 8000
+        description: `Detalle: ${errorDetails}${diagInfo}`,
+        duration: 15000
       });
     }
   };
@@ -225,16 +231,22 @@ function ProductsTab({ storeId }: { storeId: string }) {
     } catch (error: any) {
       console.error("Error al crear producto:", error);
       let errorDetails = error.message;
+      let diagInfo = "";
       try {
         const parsed = JSON.parse(error.message);
-        if (parsed && parsed.error) {
-          errorDetails = parsed.error;
+        if (parsed) {
+          if (parsed.error) {
+            errorDetails = parsed.error;
+          }
+          if (parsed.authInfo) {
+            diagInfo = ` [AuthId: ${parsed.authInfo.userId || 'null'}, storeId: ${storeId}]`;
+          }
         }
       } catch (e) {}
 
       toast.error("Error al guardar el producto", {
-        description: `Detalles del error: ${errorDetails}. Intenta cerrar y volver a iniciar sesión si persiste.`,
-        duration: 12000
+        description: `Detalles: ${errorDetails}${diagInfo}. Cierra y vuelve a iniciar sesión si es necesario.`,
+        duration: 15000
       });
     }
   };
