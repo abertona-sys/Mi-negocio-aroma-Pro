@@ -28,7 +28,7 @@ service cloud.firestore {
         && data.phone is string && data.phone.size() <= 50
         && data.ownerId == request.auth.uid
         && data.createdAt is string && data.createdAt.size() <= 60
-        && (data.description == null || (data.description is string && data.description.size() <= 500));
+        && (!('description' in data) || (data.description is string && data.description.size() <= 500));
     }
 
     // --- Product Validation ---
@@ -40,7 +40,8 @@ service cloud.firestore {
         && data.price is number && data.price >= 0
         && data.isActive is bool
         && data.createdAt is string && data.createdAt.size() <= 60
-        && (data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() <= 2000));
+        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 2000))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 1000));
     }
 
     // --- Material Validation ---
