@@ -52,9 +52,6 @@ export default function PublicCatalog() {
     <div className="min-h-screen bg-background text-foreground font-sans pb-24">
       {/* Header */}
       <header className="pt-16 pb-12 px-6 text-center space-y-4 relative">
-        <Link to="/admin" className="absolute top-6 right-6 text-sm text-muted-foreground hover:text-foreground">
-          Soy el vendedor
-        </Link>
         <h1 className="font-serif text-5xl md:text-6xl text-primary">{storeProfile.storeName || 'Aroma PRO'}</h1>
         <p className="text-muted-foreground font-serif text-xl italic max-w-md mx-auto">
           {storeProfile.description || 'Artesanía en cera aromática. Eleva tus sentidos.'}
